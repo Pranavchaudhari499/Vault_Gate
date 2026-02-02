@@ -11,12 +11,11 @@ app.use(express.json());
 const healthRoute = require("./routes/health.route");
 const authRoute = require("./routes/auth.route");
 const protectedRoute = require("./routes/protected.route");
-const financeRoute = require("./routes/finance.route");
 
 
 app.use("/health", healthRoute);
 app.use("/auth", authRoute);
 app.use("/protected", protectedRoute);
-app.use("/api", financeRoute);
 
 module.exports = app;
+
