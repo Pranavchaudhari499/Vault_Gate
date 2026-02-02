@@ -16,11 +16,13 @@ import MakePayment from './pages/user/MakePayment';
 import CheckBalance from './pages/user/CheckBalance';
 import SpamRequests from './pages/user/SpamRequests';
 import ActivityHistory from './pages/user/ActivityHistory';
+import Notifications from './pages/user/Notifications';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import APITraffic from './pages/admin/APITraffic';
 import SuspiciousActivity from './pages/admin/SuspiciousActivity';
+import RiskSecurityEngine from './pages/admin/RiskSecurityEngine';
 
 function App() {
   return (
@@ -86,6 +88,16 @@ function App() {
             }
           />
           <Route
+            path="/user/notifications"
+            element={
+              <ProtectedRoute requiredRole="user">
+                <UserLayout>
+                  <Notifications />
+                </UserLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/user/profile"
             element={
               <ProtectedRoute requiredRole="user">
@@ -123,6 +135,16 @@ function App() {
               <ProtectedRoute requiredRole="admin">
                 <AdminLayout>
                   <SuspiciousActivity />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/risk-analysis"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminLayout>
+                  <RiskSecurityEngine />
                 </AdminLayout>
               </ProtectedRoute>
             }

@@ -28,6 +28,29 @@ const apiLogSchema = new mongoose.Schema(
     reason: {
       type: String,
     },
+    accountType: {
+      type: String,
+      enum: ["SAVINGS", "CURRENT"],
+      default: "SAVINGS",
+    },
+    riskScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+    riskLevel: {
+      type: String,
+      enum: ["LOW", "MEDIUM", "HIGH"],
+      default: "LOW",
+    },
+    riskFactors: [
+      {
+        factor: String,
+        contribution: Number,
+        details: String,
+      },
+    ],
   },
   { timestamps: true }
 );

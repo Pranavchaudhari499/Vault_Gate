@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, Lock, User, Key } from 'lucide-react';
+import { UserPlus, Lock, User, Key, Briefcase } from 'lucide-react';
 import axios from '../utils/axios';
 
 const Signup = () => {
     const [formData, setFormData] = useState({
-        username: ''
+        username: '',
+        accountType: 'SAVINGS'
     });
     const [apiKey, setApiKey] = useState('');
+    const [accountType, setAccountType] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -29,6 +31,7 @@ const Signup = () => {
         try {
             const response = await axios.post('/auth/register', formData);
             setApiKey(response.data.apiKey);
+            setAccountType(response.data.accountType);
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
@@ -76,6 +79,47 @@ const Signup = () => {
                                 </div>
                             </div>
 
+                            {/* Account Type Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-3">
+                                    <Briefcase className="w-4 h-4 inline mr-2" />
+                                    Account Type
+                                </label>
+                                <div className="space-y-3">
+                                    {/* SAVINGS Account Option */}
+                                    <label className="flex items-start p-4 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition">
+                                        <input
+                                            type="radio"
+                                            name="accountType"
+                                            value="SAVINGS"
+                                            checked={formData.accountType === 'SAVINGS'}
+                                            onChange={handleChange}
+                                            className="mt-1 w-4 h-4 text-purple-600 cursor-pointer"
+                                        />
+                                        <div className="ml-3">
+                                            <p className="font-semibold text-white">Savings Account</p>
+                                            <p className="text-xs text-gray-400">Conservative security • Lower request limits • Higher sensitivity</p>
+                                        </div>
+                                    </label>
+
+                                    {/* CURRENT Account Option */}
+                                    <label className="flex items-start p-4 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition">
+                                        <input
+                                            type="radio"
+                                            name="accountType"
+                                            value="CURRENT"
+                                            checked={formData.accountType === 'CURRENT'}
+                                            onChange={handleChange}
+                                            className="mt-1 w-4 h-4 text-purple-600 cursor-pointer"
+                                        />
+                                        <div className="ml-3">
+                                            <p className="font-semibold text-white">Current Account</p>
+                                            <p className="text-xs text-gray-400">High-throughput mode • Higher request limits • Burst tolerance</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
                             {/* Error Message */}
                             {error && (
                                 <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3">
@@ -98,6 +142,7 @@ const Signup = () => {
                             <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
                                 <p className="text-green-400 font-semibold mb-2">Account Created Successfully!</p>
                                 <p className="text-gray-300 text-sm">Your API key has been generated.</p>
+                                <p className="text-gray-400 text-xs mt-2">Account Type: <span className="font-semibold">{accountType}</span></p>
                             </div>
 
                             <div>
@@ -145,7 +190,7 @@ const Signup = () => {
                 {/* Footer Note */}
                 <div className="mt-6 text-center">
                     <p className="text-sm text-gray-500">
-                        Secured with JWT Authentication & Rate Limiting
+                        Secured with JWT Authentication & Risk-Based Security Scoring
                     </p>
                 </div>
             </div>

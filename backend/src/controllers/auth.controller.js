@@ -5,10 +5,14 @@ const generateApiKey = require("../utils/generateApiKey");
 // REGISTER USER
 exports.registerUser = async (req, res) => {
   try {
-    const { username } = req.body;
+    const { username, accountType = "SAVINGS" } = req.body;
 
     if (!username) {
       return res.status(400).json({ message: "Username is required" });
+    }
+
+    if (!["SAVINGS", "CURRENT"].includes(accountType)) {
+      return res.status(400).json({ message: "Invalid account type" });
     }
 
     const existingUser = await User.findOne({ username });
@@ -21,12 +25,14 @@ exports.registerUser = async (req, res) => {
     const user = await User.create({
       username,
       apiKey,
+      accountType,
     });
 
     res.status(201).json({
       message: "User registered successfully",
       username: user.username,
       apiKey: user.apiKey,
+      accountType: user.accountType,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -50,7 +56,7 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, accountType: user.accountType },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -58,6 +64,7 @@ exports.loginUser = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
+      accountType: user.accountType,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Wallet, RefreshCw, TrendingUp, DollarSign } from 'lucide-react';
+import { Wallet, RefreshCw, TrendingUp, DollarSign, ArrowDownRight } from 'lucide-react';
 import axios from '../../utils/axios';
 
 const CheckBalance = () => {
     const [balance, setBalance] = useState(null);
+    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -14,6 +15,7 @@ const CheckBalance = () => {
         try {
             const response = await axios.get('/api/balance');
             setBalance(response.data.balance);
+            setTransactions(response.data.transactions || []);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to fetch balance');
         } finally {
@@ -30,7 +32,7 @@ const CheckBalance = () => {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold text-white mb-2">Check Balance</h1>
-                <p className="text-gray-400">View your current account balance via API Gateway</p>
+                <p className="text-gray-400">Securely read your account balance through the Vault Gate API Gateway.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -91,20 +93,28 @@ const CheckBalance = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-400 mb-1">Authentication</p>
-                                <code className="text-sm text-blue-400">Bearer JWT Token</code>
+                                <code className="text-sm text-blue-400">Bearer JWT + x-api-key</code>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-400 mb-1">Rate Limit</p>
                                 <code className="text-sm text-yellow-400">10 requests / minute</code>
                             </div>
+                            <div>
+                                <p className="text-sm text-gray-400 mb-1">Failure Codes</p>
+                                <code className="text-sm text-red-400">401 Unauthorized • 429 Rate limited</code>
+                            </div>
                         </div>
                     </div>
 
                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-                        <h4 className="text-sm font-semibold text-blue-400 mb-2">Protected by Gateway</h4>
-                        <p className="text-xs text-gray-300">
-                            This balance check is routed through the Secure API Gateway with automatic rate limiting and fraud detection.
-                        </p>
+                        <h4 className="text-sm font-semibold text-blue-400 mb-2">How it works</h4>
+                        <ol className="text-xs text-gray-300 space-y-2 list-decimal list-inside">
+                            <li>Frontend sends GET /api/balance with JWT and API key headers.</li>
+                            <li>Gateway verifies identity and role with middleware.</li>
+                            <li>Rate limiter checks 10/minute per user for this endpoint.</li>
+                            <li>Request is logged to MongoDB for admin monitoring.</li>
+                            <li>Balance payload returns on success.</li>
+                        </ol>
                     </div>
 
                     <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
@@ -124,6 +134,36 @@ const CheckBalance = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Transaction History */}
+            {transactions && transactions.length > 0 && (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">Transaction Log</h3>
+                    <div className="space-y-2">
+                        {transactions.map((txn, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition border border-transparent hover:border-slate-600">
+                                <div className="flex items-center space-x-3">
+                                    {txn.type === 'debit' ? (
+                                        <ArrowDownRight className="w-5 h-5 text-red-400" />
+                                    ) : (
+                                        <ArrowDownRight className="w-5 h-5 text-green-400 transform rotate-180" />
+                                    )}
+                                    <div>
+                                        <p className="text-sm text-white">{txn.description}</p>
+                                        <p className="text-xs text-gray-400">{new Date(txn.timestamp).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`text-sm font-semibold ${txn.type === 'debit' ? 'text-red-400' : 'text-green-400'}`}>
+                                        {txn.type === 'debit' ? '-' : '+'} ${txn.amount.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 font-mono">{txn.transactionId}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

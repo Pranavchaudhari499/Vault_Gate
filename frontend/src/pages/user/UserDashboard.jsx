@@ -17,15 +17,22 @@ const UserDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            // Mock data for now - we'll add real endpoints later
+            const response = await axios.get('/api/user/dashboard');
             setStats({
-                totalRequests: 45,
-                allowedRequests: 42,
-                blockedRequests: 3,
-                balance: 10000
+                totalRequests: response.data.totalRequests,
+                allowedRequests: response.data.allowedRequests,
+                blockedRequests: response.data.blockedRequests,
+                balance: response.data.balance,
             });
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
+            // Fallback to mock data
+            setStats({
+                totalRequests: 0,
+                allowedRequests: 0,
+                blockedRequests: 0,
+                balance: 10000
+            });
         } finally {
             setLoading(false);
         }

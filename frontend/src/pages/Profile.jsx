@@ -1,5 +1,5 @@
-import { User, ShieldCheck, Key, Clock } from 'lucide-react';
-import { getUserId, getUserRole, getTokenExpiry, getUsername } from '../utils/auth';
+import { User, ShieldCheck, Key, Clock, Briefcase } from 'lucide-react';
+import { getUserId, getUserRole, getTokenExpiry, getUsername, getAccountType } from '../utils/auth';
 
 const Profile = () => {
     const username = getUsername();
@@ -7,10 +7,15 @@ const Profile = () => {
     const userId = getUserId();
     const apiKey = localStorage.getItem('apiKey');
     const expiry = getTokenExpiry();
+    const accountType = getAccountType();
 
     const maskedApiKey = apiKey
         ? `${apiKey.slice(0, 6)}••••${apiKey.slice(-4)}`
         : 'Not available';
+
+    const getPolicyMode = () => {
+        return accountType === 'SAVINGS' ? 'Conservative' : 'High-Throughput';
+    };
 
     return (
         <div className="space-y-6">
@@ -41,7 +46,30 @@ const Profile = () => {
                         </div>
                         <div className="flex items-center justify-between">
                             <span>User ID</span>
-                            <span className="font-semibold text-white text-right">{userId || 'Unknown'}</span>
+                            <span className="font-semibold text-white text-right text-xs">{userId || 'Unknown'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                    <div className="flex items-center space-x-3 mb-4">
+                        <Briefcase className="w-5 h-5 text-violet-400" />
+                        <h2 className="text-lg font-semibold text-white">Account Type</h2>
+                    </div>
+                    <div className="space-y-3 text-slate-300">
+                        <div className="flex items-center justify-between">
+                            <span>Type</span>
+                            <span className="font-semibold text-white">{accountType || 'SAVINGS'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span>Policy Mode</span>
+                            <span className="font-semibold text-violet-300">{getPolicyMode()}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-2">
+                            {accountType === 'SAVINGS'
+                                ? '⚙️ Lower request limits, higher security sensitivity'
+                                : '⚙️ Higher request limits, burst tolerance enabled'
+                            }
                         </div>
                     </div>
                 </div>
@@ -62,19 +90,19 @@ const Profile = () => {
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                    <Clock className="w-5 h-5 text-blue-400" />
-                    <h2 className="text-lg font-semibold text-white">Session</h2>
+                <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                    <div className="flex items-center space-x-3 mb-4">
+                        <Clock className="w-5 h-5 text-blue-400" />
+                        <h2 className="text-lg font-semibold text-white">Session</h2>
+                    </div>
+                    <p className="text-slate-300">
+                        Token expiry:{' '}
+                        <span className="font-semibold text-white">
+                            {expiry ? expiry.toLocaleString() : 'Unknown'}
+                        </span>
+                    </p>
                 </div>
-                <p className="text-slate-300">
-                    Token expiry:{' '}
-                    <span className="font-semibold text-white">
-                        {expiry ? expiry.toLocaleString() : 'Unknown'}
-                    </span>
-                </p>
             </div>
         </div>
     );

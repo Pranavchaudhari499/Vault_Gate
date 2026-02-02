@@ -17,6 +17,11 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    accountType: {
+      type: String,
+      enum: ["SAVINGS", "CURRENT"],
+      default: "SAVINGS",
+    },
   },
   { timestamps: true }
 );

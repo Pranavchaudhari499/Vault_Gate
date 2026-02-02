@@ -86,3 +86,15 @@ export const getTokenExpiry = () => {
         return null;
     }
 };
+
+export const getAccountType = () => {
+    const token = getToken();
+    if (!token) return 'SAVINGS'; // Default fallback
+
+    try {
+        const decoded = jwtDecode(token);
+        return decoded.accountType || 'SAVINGS';
+    } catch (error) {
+        return 'SAVINGS';
+    }
+};

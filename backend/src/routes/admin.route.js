@@ -1,143 +1,350 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth.middleware");
+const ApiLog = require("../models/ApiLog");
+const Notification = require("../models/Notification");
+const User = require("../models/User");
+const { calculateRiskScore, formatRiskExplanation } = require("../utils/riskScoring");
 
-// Mock data for admin metrics
-const getMetrics = () => {
-    return {
-        totalRequests: Math.floor(Math.random() * 500) + 1000,
-        allowedRequests: Math.floor(Math.random() * 400) + 800,
-        blockedRequests: Math.floor(Math.random() * 150) + 50,
-        rateLimitedRequests: Math.floor(Math.random() * 100) + 30,
-        activeUsers: Math.floor(Math.random() * 50) + 30,
-        suspiciousActivities: Math.floor(Math.random() * 30) + 5
-    };
+const ensureAdmin = (req, res) => {
+    if (req.user.role !== "admin") {
+        res.status(403).json({ message: "Admin access required" });
+        return false;
+    }
+    return true;
 };
 
-const getTrafficData = () => {
-    return {
-        stats: {
-            requestsPerMinute: Math.floor(Math.random() * 200) + 50,
-            avgResponseTime: Math.floor(Math.random() * 100) + 20,
-            totalEndpoints: 12,
-            peakLoad: Math.floor(Math.random() * 500) + 200
-        },
-        traffic: [
-            {
-                id: 1,
-                endpoint: "/api/payment",
-                method: "POST",
-                requests: Math.floor(Math.random() * 300) + 100,
-                avgTime: Math.floor(Math.random() * 50) + 30,
-                status: "healthy",
-                successRate: 98.7
-            },
-            {
-                id: 2,
-                endpoint: "/api/balance",
-                method: "GET",
-                requests: Math.floor(Math.random() * 600) + 300,
-                avgTime: Math.floor(Math.random() * 40) + 20,
-                status: "healthy",
-                successRate: 99.8
-            },
-            {
-                id: 3,
-                endpoint: "/api/transfer",
-                method: "POST",
-                requests: Math.floor(Math.random() * 250) + 100,
-                avgTime: Math.floor(Math.random() * 80) + 40,
-                status: "warning",
-                successRate: 94.2
-            },
-            {
-                id: 4,
-                endpoint: "/api/user/activity",
-                method: "GET",
-                requests: Math.floor(Math.random() * 350) + 200,
-                avgTime: Math.floor(Math.random() * 50) + 20,
-                status: "healthy",
-                successRate: 99.5
-            }
-        ]
-    };
-};
-
-const getSuspiciousActivities = () => {
-    return {
-        activities: [
-            {
-                id: 1,
-                username: `user_${Math.random().toString(36).substr(2, 5)}`,
-                action: "Multiple failed login attempts",
-                type: "suspicious",
-                severity: "high",
-                timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-                details: `${Math.floor(Math.random() * 5) + 3} failed attempts in 2 minutes`,
-                ip: `192.168.1.${Math.floor(Math.random() * 255)}`
-            },
-            {
-                id: 2,
-                username: `user_${Math.random().toString(36).substr(2, 5)}`,
-                action: "Rate limit exceeded",
-                type: "rate-limited",
-                severity: "medium",
-                timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-                details: `${Math.floor(Math.random() * 20) + 10} requests in ${Math.floor(Math.random() * 30) + 10} seconds`,
-                ip: `192.168.1.${Math.floor(Math.random() * 255)}`
-            },
-            {
-                id: 3,
-                username: `user_${Math.random().toString(36).substr(2, 5)}`,
-                action: "User temporarily blocked",
-                type: "blocked",
-                severity: "critical",
-                timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-                details: "Exceeded rate limit threshold",
-                ip: `192.168.1.${Math.floor(Math.random() * 255)}`
-            },
-            {
-                id: 4,
-                username: `user_${Math.random().toString(36).substr(2, 5)}`,
-                action: "Suspicious payment pattern",
-                type: "suspicious",
-                severity: "high",
-                timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-                details: "Multiple transfers to different accounts",
-                ip: `192.168.1.${Math.floor(Math.random() * 255)}`
-            }
-        ]
-    };
+const getStatusFromSuccessRate = (rate) => {
+    if (rate >= 98) return "healthy";
+    if (rate >= 95) return "warning";
+    return "critical";
 };
 
 // Admin metrics endpoint
-router.get("/metrics", authMiddleware, (req, res) => {
-    // Check if user is admin
-    if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Admin access required" });
-    }
+router.get("/metrics", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
 
-    res.json(getMetrics());
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    const [
+        totalRequests,
+        allowedRequests,
+        blockedRequests,
+        rateLimitedRequests,
+        suspiciousActivities,
+        activeUserIds
+    ] = await Promise.all([
+        ApiLog.countDocuments(),
+        ApiLog.countDocuments({ statusCode: 200 }),
+        ApiLog.countDocuments({ isBlocked: true }),
+        ApiLog.countDocuments({ statusCode: 429 }),
+        ApiLog.countDocuments({
+            $or: [{ isBlocked: true }, { statusCode: { $gte: 400 } }]
+        }),
+        ApiLog.distinct("userId", { createdAt: { $gte: oneHourAgo } })
+    ]);
+
+    res.json({
+        totalRequests,
+        allowedRequests,
+        blockedRequests,
+        rateLimitedRequests,
+        activeUsers: activeUserIds.length,
+        suspiciousActivities
+    });
 });
 
 // API traffic monitoring
-router.get("/traffic", authMiddleware, (req, res) => {
-    // Check if user is admin
-    if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Admin access required" });
-    }
+router.get("/traffic", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
 
-    res.json(getTrafficData());
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    const requestsPerMinute = await ApiLog.countDocuments({ createdAt: { $gte: oneMinuteAgo } });
+    const totalEndpoints = await ApiLog.distinct("endpoint");
+
+    const peakLoadAgg = await ApiLog.aggregate([
+        { $match: { createdAt: { $gte: oneHourAgo } } },
+        {
+            $group: {
+                _id: {
+                    minute: {
+                        $dateToString: { format: "%Y-%m-%dT%H:%M", date: "$createdAt" }
+                    }
+                },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 1 }
+    ]);
+
+    const peakLoad = peakLoadAgg.length ? peakLoadAgg[0].count : requestsPerMinute;
+
+    const trafficAgg = await ApiLog.aggregate([
+        {
+            $group: {
+                _id: { endpoint: "$endpoint", method: "$method" },
+                requests: { $sum: 1 },
+                successCount: {
+                    $sum: {
+                        $cond: [{ $eq: ["$statusCode", 200] }, 1, 0]
+                    }
+                }
+            }
+        },
+        { $sort: { requests: -1 } },
+        { $limit: 12 }
+    ]);
+
+    const traffic = trafficAgg.map((item, index) => {
+        const successRate = item.requests
+            ? Number(((item.successCount / item.requests) * 100).toFixed(1))
+            : 0;
+        return {
+            id: index + 1,
+            endpoint: item._id.endpoint,
+            method: item._id.method,
+            requests: item.requests,
+            avgTime: 0,
+            status: getStatusFromSuccessRate(successRate),
+            successRate
+        };
+    });
+
+    res.json({
+        stats: {
+            requestsPerMinute,
+            avgResponseTime: 0,
+            totalEndpoints: totalEndpoints.length,
+            peakLoad
+        },
+        traffic
+    });
 });
 
 // Suspicious activity logs
-router.get("/suspicious-activity", authMiddleware, (req, res) => {
-    // Check if user is admin
-    if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Admin access required" });
+router.get("/suspicious-activity", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    const logs = await ApiLog.find({
+        $or: [{ isBlocked: true }, { statusCode: { $gte: 400 } }]
+    })
+        .sort({ createdAt: -1 })
+        .limit(25)
+        .populate("userId", "username accountType")
+        .lean();
+
+    const activities = logs.map((log, index) => {
+        const isRateLimited = log.statusCode === 429;
+        const isBlocked = Boolean(log.isBlocked);
+        const statusCode = log.statusCode || 0;
+
+        let type = "suspicious";
+        let action = "Suspicious request";
+        let severity = "low";
+
+        if (isBlocked) {
+            type = "blocked";
+            action = "User temporarily blocked";
+            severity = "critical";
+        } else if (isRateLimited) {
+            type = "rate-limited";
+            action = "Rate limit exceeded";
+            severity = "medium";
+        } else if (statusCode >= 500) {
+            severity = "high";
+            action = "Server error";
+        } else if (statusCode >= 401) {
+            severity = "high";
+            action = "Unauthorized request";
+        }
+
+        return {
+            id: log._id || index + 1,
+            username: log.userId?.username || "unknown",
+            userId: log.userId,
+            accountType: log.userId?.accountType || "SAVINGS",
+            action,
+            type,
+            severity,
+            timestamp: log.createdAt,
+            riskScore: log.riskScore || 0,
+            riskLevel: log.riskLevel || "LOW",
+            riskFactors: log.riskFactors || [],
+            details: log.reason || `${log.method} ${log.endpoint} -> ${statusCode}`,
+            ip: log.ipAddress || "unknown"
+        };
+    });
+
+    res.json({ activities });
+});
+
+// Get user details for investigation
+router.get("/user/:userId", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    const user = await User.findById(req.params.userId).select(
+        "username apiKey role createdAt"
+    );
+
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(getSuspiciousActivities());
+    const recentLogs = await ApiLog.find({ userId: req.params.userId })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean();
+
+    res.json({
+        user,
+        recentLogs
+    });
+});
+
+// Send notification to user (admin only)
+router.post("/notify", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    const { userId, title, message, type = "alert", severity = "medium", actionRequired = false, details } = req.body;
+
+    if (!userId || !title || !message) {
+        return res.status(400).json({ message: "userId, title, and message required" });
+    }
+
+    try {
+        const notification = await Notification.create({
+            userId,
+            title,
+            message,
+            type,
+            severity,
+            actionRequired,
+            details
+        });
+
+        res.status(201).json({
+            message: "Notification sent",
+            notification
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get risk analysis for a specific user
+router.get("/risk-analysis/:userId", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userLogs = await ApiLog.find({ userId: req.params.userId })
+            .sort({ createdAt: -1 })
+            .limit(30)
+            .lean();
+
+        const riskData = await calculateRiskScore({
+            userId: req.params.userId,
+            accountType: user.accountType,
+            userLogs
+        });
+
+        const explanation = formatRiskExplanation(riskData, user);
+
+        // Get account-type policy details
+        const policyMode = user.accountType === "SAVINGS" ? "Conservative" : "High-Throughput";
+
+        res.json({
+            user: {
+                _id: user._id,
+                username: user.username,
+                accountType: user.accountType,
+                policyMode
+            },
+            riskAnalysis: {
+                score: riskData.score,
+                level: riskData.level,
+                action: riskData.action,
+                factors: riskData.factors,
+                timestamp: riskData.timestamp
+            },
+            explanation,
+            recentActivity: {
+                totalRequests: userLogs.length,
+                blockedRequests: userLogs.filter(l => l.statusCode >= 400).length,
+                rateLimitedRequests: userLogs.filter(l => l.statusCode === 429).length,
+                lastRequest: userLogs[0]?.createdAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get risk dashboard - summary of all user risks
+router.get("/risk-dashboard", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    try {
+        const users = await User.find({ role: "user" }).lean();
+
+        const riskSummary = [];
+
+        for (const user of users) {
+            const userLogs = await ApiLog.find({ userId: user._id })
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .lean();
+
+            if (userLogs.length === 0) continue;
+
+            const riskData = await calculateRiskScore({
+                userId: user._id,
+                accountType: user.accountType,
+                userLogs
+            });
+
+            riskSummary.push({
+                userId: user._id,
+                username: user.username,
+                accountType: user.accountType,
+                policyMode: user.accountType === "SAVINGS" ? "Conservative" : "High-Throughput",
+                riskScore: riskData.score,
+                riskLevel: riskData.level,
+                action: riskData.action,
+                topRiskFactors: riskData.factors.slice(0, 2),
+                timestamp: new Date()
+            });
+        }
+
+        // Sort by risk score (highest first)
+        riskSummary.sort((a, b) => b.riskScore - a.riskScore);
+
+        // Summary statistics
+        const highRiskUsers = riskSummary.filter(r => r.riskLevel === "HIGH");
+        const mediumRiskUsers = riskSummary.filter(r => r.riskLevel === "MEDIUM");
+        const avgRiskScore = riskSummary.length > 0
+            ? (riskSummary.reduce((sum, r) => sum + r.riskScore, 0) / riskSummary.length).toFixed(2)
+            : 0;
+
+        res.json({
+            summary: {
+                totalUsers: riskSummary.length,
+                highRiskCount: highRiskUsers.length,
+                mediumRiskCount: mediumRiskUsers.length,
+                averageRiskScore: parseFloat(avgRiskScore)
+            },
+            users: riskSummary
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 });
 
 module.exports = router;
