@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, AlertTriangle, Ban, Eye, User } from 'lucide-react';
 import axios from '../../utils/axios';
+import InvestigateModal from '../../components/InvestigateModal';
 
 const SuspiciousActivity = () => {
     const [activities, setActivities] = useState([]);
     const [filter, setFilter] = useState('all'); // all, rate-limited, blocked, suspicious
     const [loading, setLoading] = useState(true);
+    const [selectedActivity, setSelectedActivity] = useState(null);
 
     useEffect(() => {
         fetchSuspiciousActivities();
@@ -168,8 +170,8 @@ const SuspiciousActivity = () => {
                 <button
                     onClick={() => setFilter('all')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'all'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     All
@@ -177,8 +179,8 @@ const SuspiciousActivity = () => {
                 <button
                     onClick={() => setFilter('blocked')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'blocked'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     Blocked
@@ -186,8 +188,8 @@ const SuspiciousActivity = () => {
                 <button
                     onClick={() => setFilter('rate-limited')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'rate-limited'
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     Rate Limited
@@ -195,8 +197,8 @@ const SuspiciousActivity = () => {
                 <button
                     onClick={() => setFilter('suspicious')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'suspicious'
-                            ? 'bg-orange-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     Suspicious
@@ -246,7 +248,10 @@ const SuspiciousActivity = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <button className="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-sm rounded border border-blue-500/30 transition">
+                                    <button
+                                        onClick={() => setSelectedActivity(activity)}
+                                        className="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-sm rounded border border-blue-500/30 transition"
+                                    >
                                         Investigate
                                     </button>
                                 </div>
@@ -255,6 +260,18 @@ const SuspiciousActivity = () => {
                     </div>
                 )}
             </div>
+
+            {/* Investigate Modal */}
+            {selectedActivity && (
+                <InvestigateModal
+                    activity={selectedActivity}
+                    onClose={() => setSelectedActivity(null)}
+                    onNotificationSent={() => {
+                        setSelectedActivity(null);
+                        fetchSuspiciousActivities();
+                    }}
+                />
+            )}
         </div>
     );
 };

@@ -6,6 +6,7 @@ import {
     Zap,
     History,
     UserCircle,
+    Bell,
     LogOut
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +19,8 @@ const UserLayout = ({ children }) => {
         { to: '/user/payment', icon: DollarSign, label: 'Make Payment' },
         { to: '/user/balance', icon: Wallet, label: 'Check Balance' },
         { to: '/user/spam', icon: Zap, label: 'Spam Requests' },
-        { to: '/user/activity', icon: History, label: 'Activity History' }
+        { to: '/user/activity', icon: History, label: 'Activity History' },
+        { to: '/user/notifications', icon: Bell, label: 'Notifications' }
     ];
 
     return (

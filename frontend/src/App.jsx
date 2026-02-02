@@ -16,6 +16,7 @@ import MakePayment from './pages/user/MakePayment';
 import CheckBalance from './pages/user/CheckBalance';
 import SpamRequests from './pages/user/SpamRequests';
 import ActivityHistory from './pages/user/ActivityHistory';
+import Notifications from './pages/user/Notifications';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -81,6 +82,16 @@ function App() {
               <ProtectedRoute requiredRole="user">
                 <UserLayout>
                   <ActivityHistory />
+                </UserLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/notifications"
+            element={
+              <ProtectedRoute requiredRole="user">
+                <UserLayout>
+                  <Notifications />
                 </UserLayout>
               </ProtectedRoute>
             }

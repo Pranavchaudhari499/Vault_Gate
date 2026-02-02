@@ -23,7 +23,7 @@ const MakePayment = () => {
         setResponse(null);
 
         try {
-            const res = await axios.post('/api/payment', {
+            const res = await axios.post('/api/transfer', {
                 recipient: formData.recipient,
                 amount: parseFloat(formData.amount)
             });
@@ -51,8 +51,8 @@ const MakePayment = () => {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Make Payment</h1>
-                <p className="text-gray-400">Transfer funds through the Secure API Gateway</p>
+                <h1 className="text-3xl font-bold text-white mb-2">Transfer Money</h1>
+                <p className="text-gray-400">Send funds through the Secure API Gateway</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -60,7 +60,7 @@ const MakePayment = () => {
                 <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
                     <div className="flex items-center space-x-2 mb-6">
                         <DollarSign className="w-6 h-6 text-green-400" />
-                        <h2 className="text-xl font-semibold text-white">Payment Details</h2>
+                        <h2 className="text-xl font-semibold text-white">Transfer Details</h2>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,7 +109,7 @@ const MakePayment = () => {
                             ) : (
                                 <>
                                     <Send className="w-5 h-5" />
-                                    <span>Send Payment</span>
+                                    <span>Send Transfer</span>
                                 </>
                             )}
                         </button>
@@ -123,8 +123,8 @@ const MakePayment = () => {
 
                         {response ? (
                             <div className={`p-4 rounded-lg border ${response.success
-                                    ? 'bg-green-500/10 border-green-500/50'
-                                    : 'bg-red-500/10 border-red-500/50'
+                                ? 'bg-green-500/10 border-green-500/50'
+                                : 'bg-red-500/10 border-red-500/50'
                                 }`}>
                                 <div className="flex items-start space-x-3">
                                     {response.success ? (
@@ -162,7 +162,7 @@ const MakePayment = () => {
                     {/* Info Box */}
                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
                         <p className="text-sm text-blue-300">
-                            <strong>API Endpoint:</strong> POST /api/payment
+                            <strong>API Endpoint:</strong> POST /api/transfer
                         </p>
                         <p className="text-xs text-gray-400 mt-2">
                             This request goes through the Secure API Gateway with rate limiting protection

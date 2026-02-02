@@ -20,9 +20,9 @@ const SpamRequests = () => {
         const requestCount = 15; // Send 15 requests to trigger rate limiting
 
         for (let i = 1; i <= requestCount; i++) {
+            const startTime = Date.now();
             try {
-                const startTime = Date.now();
-                const response = await axios.get('/api/test-endpoint');
+                const response = await axios.get('/api/balance');
                 const duration = Date.now() - startTime;
 
                 const newRequest = {
@@ -52,14 +52,6 @@ const SpamRequests = () => {
                         ...prev,
                         total: prev.total + 1,
                         rateLimited: prev.rateLimited + 1
-                    }));
-                } else if (error.response?.status === 403) {
-                    status = 'blocked';
-                    message = 'User temporarily blocked';
-                    setStats(prev => ({
-                        ...prev,
-                        total: prev.total + 1,
-                        blocked: prev.blocked + 1
                     }));
                 } else {
                     setStats(prev => ({ ...prev, total: prev.total + 1 }));
@@ -145,15 +137,15 @@ const SpamRequests = () => {
                         <Zap className="w-6 h-6 text-orange-400" />
                         <div>
                             <h2 className="text-xl font-semibold text-white">Spam Attack Simulator</h2>
-                            <p className="text-sm text-gray-400">Send 15 rapid requests to trigger rate limiting</p>
+                            <p className="text-sm text-gray-400">Send 15 rapid requests to /api/balance to trigger rate limiting</p>
                         </div>
                     </div>
                     <button
                         onClick={sendSpamRequests}
                         disabled={isRunning}
                         className={`px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105 disabled:transform-none flex items-center space-x-2 ${isRunning
-                                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white'
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white'
                             }`}
                     >
                         {isRunning ? (
@@ -208,7 +200,14 @@ const SpamRequests = () => {
             {/* Info */}
             <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
                 <p className="text-sm text-orange-300">
-                    <strong>What happens:</strong> The first few requests will succeed (200 OK), then you'll see "429 Rate Limit Exceeded" errors. If you continue, the user may be temporarily blocked (403 Forbidden).
+                    <strong>What happens:</strong> The first 10 requests usually succeed (200 OK), then you'll see 429 Rate Limit Exceeded errors. The gateway blocks further requests for 15 minutes.
+                </p>
+            </div>
+
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-white mb-2">Proper use</h4>
+                <p className="text-xs text-gray-300">
+                    This simulator is only for demonstrating rate limiting in a safe, controlled way. Use it during demos or testing, not in production traffic. If you need to resume normal usage, wait 15 minutes for the block to clear.
                 </p>
             </div>
         </div>
