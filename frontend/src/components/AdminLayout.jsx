@@ -5,7 +5,8 @@ import {
     ShieldAlert,
     UserCircle,
     LogOut,
-    Shield
+    Shield,
+    Beaker
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,7 +17,8 @@ const AdminLayout = ({ children }) => {
         { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/admin/traffic', icon: Activity, label: 'API Traffic' },
         { to: '/admin/suspicious', icon: ShieldAlert, label: 'Suspicious Activity' },
-        { to: '/admin/risk-analysis', icon: Shield, label: 'Risk Analysis' }
+        { to: '/admin/risk-analysis', icon: Shield, label: 'Risk Analysis' },
+        { to: '/admin/policy-simulation', icon: Beaker, label: 'Policy Simulation' }
     ];
 
     return (

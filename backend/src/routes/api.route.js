@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require("../middleware/auth.middleware");
 const ApiLog = require("../models/ApiLog");
 const Balance = require("../models/Balance");
+const { calculateRiskScore } = require("../utils/riskScoring");
 
 const BLOCK_DURATION = 15 * 60 * 1000; // 15 minutes
 
@@ -24,8 +25,59 @@ const getClientIp = (req) => {
 
 const getKey = (userId, endpoint) => `${userId}:${endpoint}`;
 
+const deriveRiskLevel = (score) => {
+    if (score > 60) return "HIGH";
+    if (score > 30) return "MEDIUM";
+    return "LOW";
+};
+
 const logRequest = async ({ req, endpoint, statusCode, isBlocked = false, reason }) => {
     try {
+        const accountType = req.user?.accountType || "SAVINGS";
+        const recentLogs = req.user?._id
+            ? await ApiLog.find({ userId: req.user._id })
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .lean()
+            : [];
+
+        const riskData = req.user?._id
+            ? await calculateRiskScore({
+                userId: req.user._id,
+                accountType,
+                userLogs: recentLogs
+            })
+            : { score: 0, level: "LOW", factors: [] };
+
+        let derivedScore = riskData.score || 0;
+        const riskFactors = [...(riskData.factors || [])];
+
+        if (isBlocked || statusCode === 429) {
+            derivedScore = Math.max(derivedScore, 65);
+            riskFactors.push({
+                factor: "Rate limit / block event",
+                contribution: 25,
+                details: "Request was rate limited or blocked"
+            });
+        } else if (statusCode >= 500) {
+            derivedScore = Math.max(derivedScore, 80);
+            riskFactors.push({
+                factor: "Server error",
+                contribution: 20,
+                details: `Status code ${statusCode}`
+            });
+        } else if (statusCode >= 400) {
+            derivedScore = Math.max(derivedScore, 45);
+            riskFactors.push({
+                factor: "Client error",
+                contribution: 15,
+                details: `Status code ${statusCode}`
+            });
+        }
+
+        const riskScore = Math.min(derivedScore, 100);
+        const riskLevel = deriveRiskLevel(riskScore);
+
         await ApiLog.create({
             userId: req.user?._id,
             endpoint,
@@ -33,7 +85,11 @@ const logRequest = async ({ req, endpoint, statusCode, isBlocked = false, reason
             statusCode,
             ipAddress: getClientIp(req),
             isBlocked,
-            reason
+            reason,
+            accountType,
+            riskScore,
+            riskLevel,
+            riskFactors
         });
     } catch (error) {
         console.error("ApiLog error:", error.message);
