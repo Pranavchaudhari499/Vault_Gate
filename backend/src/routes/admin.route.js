@@ -4,6 +4,7 @@ const authMiddleware = require("../middleware/auth.middleware");
 const ApiLog = require("../models/ApiLog");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
+const { calculateRiskScore, formatRiskExplanation } = require("../utils/riskScoring");
 
 const ensureAdmin = (req, res) => {
     if (req.user.role !== "admin") {
@@ -132,7 +133,7 @@ router.get("/suspicious-activity", authMiddleware, async (req, res) => {
     })
         .sort({ createdAt: -1 })
         .limit(25)
-        .populate("userId", "username")
+        .populate("userId", "username accountType")
         .lean();
 
     const activities = logs.map((log, index) => {
@@ -164,10 +165,14 @@ router.get("/suspicious-activity", authMiddleware, async (req, res) => {
             id: log._id || index + 1,
             username: log.userId?.username || "unknown",
             userId: log.userId,
+            accountType: log.userId?.accountType || "SAVINGS",
             action,
             type,
             severity,
             timestamp: log.createdAt,
+            riskScore: log.riskScore || 0,
+            riskLevel: log.riskLevel || "LOW",
+            riskFactors: log.riskFactors || [],
             details: log.reason || `${log.method} ${log.endpoint} -> ${statusCode}`,
             ip: log.ipAddress || "unknown"
         };
@@ -223,6 +228,119 @@ router.post("/notify", authMiddleware, async (req, res) => {
         res.status(201).json({
             message: "Notification sent",
             notification
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get risk analysis for a specific user
+router.get("/risk-analysis/:userId", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userLogs = await ApiLog.find({ userId: req.params.userId })
+            .sort({ createdAt: -1 })
+            .limit(30)
+            .lean();
+
+        const riskData = await calculateRiskScore({
+            userId: req.params.userId,
+            accountType: user.accountType,
+            userLogs
+        });
+
+        const explanation = formatRiskExplanation(riskData, user);
+
+        // Get account-type policy details
+        const policyMode = user.accountType === "SAVINGS" ? "Conservative" : "High-Throughput";
+
+        res.json({
+            user: {
+                _id: user._id,
+                username: user.username,
+                accountType: user.accountType,
+                policyMode
+            },
+            riskAnalysis: {
+                score: riskData.score,
+                level: riskData.level,
+                action: riskData.action,
+                factors: riskData.factors,
+                timestamp: riskData.timestamp
+            },
+            explanation,
+            recentActivity: {
+                totalRequests: userLogs.length,
+                blockedRequests: userLogs.filter(l => l.statusCode >= 400).length,
+                rateLimitedRequests: userLogs.filter(l => l.statusCode === 429).length,
+                lastRequest: userLogs[0]?.createdAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get risk dashboard - summary of all user risks
+router.get("/risk-dashboard", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    try {
+        const users = await User.find({ role: "user" }).lean();
+
+        const riskSummary = [];
+
+        for (const user of users) {
+            const userLogs = await ApiLog.find({ userId: user._id })
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .lean();
+
+            if (userLogs.length === 0) continue;
+
+            const riskData = await calculateRiskScore({
+                userId: user._id,
+                accountType: user.accountType,
+                userLogs
+            });
+
+            riskSummary.push({
+                userId: user._id,
+                username: user.username,
+                accountType: user.accountType,
+                policyMode: user.accountType === "SAVINGS" ? "Conservative" : "High-Throughput",
+                riskScore: riskData.score,
+                riskLevel: riskData.level,
+                action: riskData.action,
+                topRiskFactors: riskData.factors.slice(0, 2),
+                timestamp: new Date()
+            });
+        }
+
+        // Sort by risk score (highest first)
+        riskSummary.sort((a, b) => b.riskScore - a.riskScore);
+
+        // Summary statistics
+        const highRiskUsers = riskSummary.filter(r => r.riskLevel === "HIGH");
+        const mediumRiskUsers = riskSummary.filter(r => r.riskLevel === "MEDIUM");
+        const avgRiskScore = riskSummary.length > 0
+            ? (riskSummary.reduce((sum, r) => sum + r.riskScore, 0) / riskSummary.length).toFixed(2)
+            : 0;
+
+        res.json({
+            summary: {
+                totalUsers: riskSummary.length,
+                highRiskCount: highRiskUsers.length,
+                mediumRiskCount: mediumRiskUsers.length,
+                averageRiskScore: parseFloat(avgRiskScore)
+            },
+            users: riskSummary
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

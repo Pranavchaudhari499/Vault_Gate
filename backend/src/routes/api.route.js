@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth.middleware");
 const ApiLog = require("../models/ApiLog");
+const Balance = require("../models/Balance");
 
 const BLOCK_DURATION = 15 * 60 * 1000; // 15 minutes
 
@@ -113,12 +114,41 @@ const handleTransfer = async (req, res, endpoint) => {
         return res.status(429).json({ message: "Rate limit exceeded" });
     }
 
+    // Check balance and deduct amount
+    let userBalance = await Balance.findOne({ userId });
+    if (!userBalance) {
+        userBalance = await Balance.create({ userId, balance: 10000 });
+    }
+
+    if (userBalance.balance < Number(amount)) {
+        await logRequest({ req, endpoint, statusCode: 400, reason: "insufficient_funds" });
+        return res.status(400).json({
+            message: "Insufficient balance",
+            currentBalance: userBalance.balance,
+            requiredAmount: Number(amount)
+        });
+    }
+
+    // Deduct amount from balance
+    const transactionId = `TXN-${Date.now()}`;
+    userBalance.balance -= Number(amount);
+    userBalance.transactions.push({
+        type: "debit",
+        amount: Number(amount),
+        description: `Transfer to ${recipient}`,
+        recipient,
+        transactionId,
+        timestamp: new Date()
+    });
+    await userBalance.save();
+
     await logRequest({ req, endpoint, statusCode: 200 });
     return res.status(200).json({
         message: "Transfer completed successfully",
-        transactionId: `TXN-${Date.now()}`,
+        transactionId,
         recipient,
         amount: Number(amount),
+        newBalance: userBalance.balance,
         timestamp: new Date().toISOString()
     });
 };
@@ -140,11 +170,18 @@ router.get("/balance", authMiddleware, async (req, res) => {
         return res.status(429).json({ message: "Rate limit exceeded" });
     }
 
+    // Get real balance from database
+    let userBalance = await Balance.findOne({ userId });
+    if (!userBalance) {
+        userBalance = await Balance.create({ userId, balance: 10000 });
+    }
+
     await logRequest({ req, endpoint, statusCode: 200 });
     return res.json({
-        balance: 10000,
+        balance: userBalance.balance,
         currency: "USD",
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        transactions: userBalance.transactions.slice(-5) // Return last 5 transactions
     });
 });
 

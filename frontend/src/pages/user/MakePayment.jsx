@@ -170,6 +170,39 @@ const MakePayment = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Transaction Log */}
+            {response?.success && response?.data && (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">Transaction Details</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                            <span className="text-gray-400">Status</span>
+                            <span className="text-green-400 font-semibold">✓ Completed</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                            <span className="text-gray-400">Transaction ID</span>
+                            <span className="text-white font-mono text-sm">{response.data.transactionId}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                            <span className="text-gray-400">Recipient</span>
+                            <span className="text-white">{response.data.recipient}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                            <span className="text-gray-400">Amount Deducted</span>
+                            <span className="text-red-400 font-semibold">-${response.data.amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                            <span className="text-gray-400">New Balance</span>
+                            <span className="text-green-400 font-semibold">${response.data.newBalance.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-400">Timestamp</span>
+                            <span className="text-gray-300 text-sm">{new Date(response.data.timestamp).toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -15,7 +15,7 @@ const NotificationsPanel = () => {
 
     const fetchNotifications = async () => {
         try {
-            const response = await axios.get('/api/notifications');
+            const response = await axios.get('/api/user/notifications');
             const notifs = response.data.notifications || [];
             setNotifications(notifs);
             setUnreadCount(notifs.filter(n => !n.read).length);
@@ -101,8 +101,8 @@ const NotificationsPanel = () => {
                         <div
                             key={notif._id}
                             className={`p-4 rounded-lg border transition ${notif.read
-                                    ? 'bg-slate-800/30 border-slate-700'
-                                    : 'bg-slate-800/50 border-slate-600'
+                                ? 'bg-slate-800/30 border-slate-700'
+                                : 'bg-slate-800/50 border-slate-600'
                                 }`}
                         >
                             <div className="flex items-start justify-between">

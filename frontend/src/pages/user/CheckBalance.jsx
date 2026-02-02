@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Wallet, RefreshCw, TrendingUp, DollarSign } from 'lucide-react';
+import { Wallet, RefreshCw, TrendingUp, DollarSign, ArrowDownRight } from 'lucide-react';
 import axios from '../../utils/axios';
 
 const CheckBalance = () => {
     const [balance, setBalance] = useState(null);
+    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -14,6 +15,7 @@ const CheckBalance = () => {
         try {
             const response = await axios.get('/api/balance');
             setBalance(response.data.balance);
+            setTransactions(response.data.transactions || []);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to fetch balance');
         } finally {
@@ -132,6 +134,36 @@ const CheckBalance = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Transaction History */}
+            {transactions && transactions.length > 0 && (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">Transaction Log</h3>
+                    <div className="space-y-2">
+                        {transactions.map((txn, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition border border-transparent hover:border-slate-600">
+                                <div className="flex items-center space-x-3">
+                                    {txn.type === 'debit' ? (
+                                        <ArrowDownRight className="w-5 h-5 text-red-400" />
+                                    ) : (
+                                        <ArrowDownRight className="w-5 h-5 text-green-400 transform rotate-180" />
+                                    )}
+                                    <div>
+                                        <p className="text-sm text-white">{txn.description}</p>
+                                        <p className="text-xs text-gray-400">{new Date(txn.timestamp).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`text-sm font-semibold ${txn.type === 'debit' ? 'text-red-400' : 'text-green-400'}`}>
+                                        {txn.type === 'debit' ? '-' : '+'} ${txn.amount.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 font-mono">{txn.transactionId}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

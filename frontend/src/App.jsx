@@ -22,6 +22,7 @@ import Notifications from './pages/user/Notifications';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import APITraffic from './pages/admin/APITraffic';
 import SuspiciousActivity from './pages/admin/SuspiciousActivity';
+import RiskSecurityEngine from './pages/admin/RiskSecurityEngine';
 
 function App() {
   return (
@@ -134,6 +135,16 @@ function App() {
               <ProtectedRoute requiredRole="admin">
                 <AdminLayout>
                   <SuspiciousActivity />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/risk-analysis"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminLayout>
+                  <RiskSecurityEngine />
                 </AdminLayout>
               </ProtectedRoute>
             }

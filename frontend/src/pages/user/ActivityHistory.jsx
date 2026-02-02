@@ -13,53 +13,11 @@ const ActivityHistory = () => {
 
     const fetchActivities = async () => {
         try {
-            const response = await axios.get('/api/user/activity');
+            const response = await axios.get('/api/user/activity?limit=50');
             setActivities(response.data.activities || []);
         } catch (error) {
             console.error('Error fetching activities:', error);
-            // Mock data for demo
-            setActivities([
-                {
-                    id: 1,
-                    type: 'payment',
-                    action: 'Payment Sent',
-                    status: 'success',
-                    details: 'Sent $250 to user_bob',
-                    timestamp: new Date().toISOString()
-                },
-                {
-                    id: 2,
-                    type: 'balance',
-                    action: 'Balance Check',
-                    status: 'success',
-                    details: 'Checked account balance',
-                    timestamp: new Date(Date.now() - 300000).toISOString()
-                },
-                {
-                    id: 3,
-                    type: 'payment',
-                    action: 'Payment Failed',
-                    status: 'failed',
-                    details: 'Insufficient funds',
-                    timestamp: new Date(Date.now() - 600000).toISOString()
-                },
-                {
-                    id: 4,
-                    type: 'api',
-                    action: 'API Request',
-                    status: 'rate-limited',
-                    details: 'Rate limit exceeded',
-                    timestamp: new Date(Date.now() - 900000).toISOString()
-                },
-                {
-                    id: 5,
-                    type: 'balance',
-                    action: 'Balance Check',
-                    status: 'success',
-                    details: 'Checked account balance',
-                    timestamp: new Date(Date.now() - 1200000).toISOString()
-                }
-            ]);
+            setActivities([]);
         } finally {
             setLoading(false);
         }
@@ -144,8 +102,8 @@ const ActivityHistory = () => {
                 <button
                     onClick={() => setFilter('all')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'all'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     All
@@ -153,8 +111,8 @@ const ActivityHistory = () => {
                 <button
                     onClick={() => setFilter('success')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'success'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     Success
@@ -162,8 +120,8 @@ const ActivityHistory = () => {
                 <button
                     onClick={() => setFilter('failed')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'failed'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     Failed
@@ -171,8 +129,8 @@ const ActivityHistory = () => {
                 <button
                     onClick={() => setFilter('rate-limited')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'rate-limited'
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
                         }`}
                 >
                     Rate Limited
