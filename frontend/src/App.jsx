@@ -23,6 +23,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import APITraffic from './pages/admin/APITraffic';
 import SuspiciousActivity from './pages/admin/SuspiciousActivity';
 import RiskSecurityEngine from './pages/admin/RiskSecurityEngine';
+import PolicySimulation from './pages/PolicySimulation';
 
 function App() {
   return (
@@ -145,6 +146,16 @@ function App() {
               <ProtectedRoute requiredRole="admin">
                 <AdminLayout>
                   <RiskSecurityEngine />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/policy-simulation"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminLayout>
+                  <PolicySimulation />
                 </AdminLayout>
               </ProtectedRoute>
             }

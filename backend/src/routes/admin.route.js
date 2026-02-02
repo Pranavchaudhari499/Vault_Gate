@@ -5,6 +5,7 @@ const ApiLog = require("../models/ApiLog");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
 const { calculateRiskScore, formatRiskExplanation } = require("../utils/riskScoring");
+const { getRateLimitMetrics, resetMetrics } = require("../middleware/gatewayRateLimit.middleware");
 
 const ensureAdmin = (req, res) => {
     if (req.user.role !== "admin") {
@@ -345,6 +346,22 @@ router.get("/risk-dashboard", authMiddleware, async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+});
+
+// Gateway rate limit metrics endpoint
+router.get("/gateway-metrics", authMiddleware, (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    const metrics = getRateLimitMetrics();
+    res.json(metrics);
+});
+
+// Reset gateway metrics (admin only)
+router.post("/reset-gateway-metrics", authMiddleware, (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    resetMetrics();
+    res.json({ message: "Gateway metrics reset successfully" });
 });
 
 module.exports = router;
