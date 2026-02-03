@@ -34,6 +34,7 @@ const deriveRiskLevel = (score) => {
 const logRequest = async ({ req, endpoint, statusCode, isBlocked = false, reason }) => {
     try {
         const accountType = req.user?.accountType || "SAVINGS";
+        const responseTime = Math.max(0, Date.now() - (req._startTime || Date.now()));
         const recentLogs = req.user?._id
             ? await ApiLog.find({ userId: req.user._id })
                 .sort({ createdAt: -1 })
@@ -94,7 +95,8 @@ const logRequest = async ({ req, endpoint, statusCode, isBlocked = false, reason
             accountType,
             riskScore,
             riskLevel,
-            riskFactors
+            riskFactors,
+            responseTime
         });
     } catch (error) {
         console.error("ApiLog error:", error.message);

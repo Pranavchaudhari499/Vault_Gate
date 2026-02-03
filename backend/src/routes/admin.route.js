@@ -67,6 +67,16 @@ router.get("/traffic", authMiddleware, async (req, res) => {
     const requestsPerMinute = await ApiLog.countDocuments({ createdAt: { $gte: oneMinuteAgo } });
     const totalEndpoints = await ApiLog.distinct("endpoint");
 
+    const avgResponseAgg = await ApiLog.aggregate([
+        { $match: { createdAt: { $gte: oneMinuteAgo } } },
+        {
+            $group: {
+                _id: null,
+                avgResponseTime: { $avg: "$responseTime" }
+            }
+        }
+    ]);
+
     const peakLoadAgg = await ApiLog.aggregate([
         { $match: { createdAt: { $gte: oneHourAgo } } },
         {
@@ -94,7 +104,8 @@ router.get("/traffic", authMiddleware, async (req, res) => {
                     $sum: {
                         $cond: [{ $eq: ["$statusCode", 200] }, 1, 0]
                     }
-                }
+                },
+                avgResponseTime: { $avg: "$responseTime" }
             }
         },
         { $sort: { requests: -1 } },
@@ -110,7 +121,7 @@ router.get("/traffic", authMiddleware, async (req, res) => {
             endpoint: item._id.endpoint,
             method: item._id.method,
             requests: item.requests,
-            avgTime: 0,
+            avgTime: Math.round(item.avgResponseTime || 0),
             status: getStatusFromSuccessRate(successRate),
             successRate
         };
@@ -119,7 +130,7 @@ router.get("/traffic", authMiddleware, async (req, res) => {
     res.json({
         stats: {
             requestsPerMinute,
-            avgResponseTime: 0,
+            avgResponseTime: Math.round(avgResponseAgg[0]?.avgResponseTime || 0),
             totalEndpoints: totalEndpoints.length,
             peakLoad
         },

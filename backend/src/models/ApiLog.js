@@ -30,7 +30,7 @@ const apiLogSchema = new mongoose.Schema(
     },
     accountType: {
       type: String,
-      enum: ["SAVINGS", "CURRENT"],
+      enum: ["SAVINGS", "CURRENT", "ANONYMOUS"],
       default: "SAVINGS",
     },
     riskScore: {
@@ -51,6 +51,10 @@ const apiLogSchema = new mongoose.Schema(
         details: String,
       },
     ],
+    responseTime: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

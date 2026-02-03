@@ -8,6 +8,7 @@ import {
     LogOut,
     Shield,
     Beaker,
+    Brain,
     Menu,
     X
 } from 'lucide-react';
@@ -22,6 +23,7 @@ const AdminLayout = ({ children }) => {
         { to: '/admin/traffic', icon: Activity, label: 'API Traffic' },
         { to: '/admin/suspicious', icon: ShieldAlert, label: 'Suspicious Activity' },
         { to: '/admin/risk-analysis', icon: Shield, label: 'Risk Analysis' },
+        { to: '/admin/behavioral-anomalies', icon: Brain, label: 'ML Anomaly Detection' },
         { to: '/admin/policy-simulation', icon: Beaker, label: 'Policy Simulation' }
     ];
 

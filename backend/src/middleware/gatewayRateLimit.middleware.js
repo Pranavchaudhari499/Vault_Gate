@@ -131,7 +131,7 @@ const gatewayRateLimitMiddleware = async (req, res, next) => {
         ipAddress: identifier.startsWith("ip:") ? identifier.replace("ip:", "") : "N/A",
         isBlocked: true,
         reason: "Gateway rate limit exceeded",
-        accountType: req.user?.accountType || "ANONYMOUS",
+        accountType: req.user?.accountType || "SAVINGS",
         riskScore: 75,
         riskLevel: "HIGH",
         riskFactors: [
