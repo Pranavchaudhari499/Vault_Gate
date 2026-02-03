@@ -262,7 +262,7 @@ const BehavioralAnomalies = () => {
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Risk Score</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Risk Level</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Action</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Reason</th>
+                                    {/* <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Reason</th> */}
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Requests</th>
                                 </tr>
                             </thead>
@@ -296,9 +296,9 @@ const BehavioralAnomalies = () => {
                                         <td className="px-6 py-4">
                                             <span className="text-white font-medium">{anomaly.action}</span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        {/* <td className="px-6 py-4">
                                             <p className="text-sm text-gray-300 max-w-md">{anomaly.reason}</p>
-                                        </td>
+                                        </td> */}
                                         <td className="px-6 py-4 text-gray-300">
                                             {anomaly.total_requests}
                                         </td>
