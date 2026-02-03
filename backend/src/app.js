@@ -19,6 +19,7 @@ const apiRoute = require("./routes/api.route");
 const adminRoute = require("./routes/admin.route");
 const adminSimulationRoute = require("./routes/adminSimulation.routes");
 const userRoute = require("./routes/user.route");
+const chatRoute = require("./routes/chat.route");
 
 
 app.use("/health", healthRoute);
@@ -28,6 +29,7 @@ app.use("/api", apiRoute);
 app.use("/api/admin", adminRoute);
 app.use("/api/admin", adminSimulationRoute);
 app.use("/api/user", userRoute);
+app.use("/api/chat", chatRoute);
 
 module.exports = app;
 

@@ -78,6 +78,11 @@ const logRequest = async ({ req, endpoint, statusCode, isBlocked = false, reason
         const riskScore = Math.min(derivedScore, 100);
         const riskLevel = deriveRiskLevel(riskScore);
 
+        // Debug: Log risk score calculation
+        if ((statusCode >= 400 || isBlocked || statusCode === 429)) {
+            console.log(`[Risk Debug] Endpoint: ${endpoint}, Status: ${statusCode}, IsBlocked: ${isBlocked}, Derived: ${derivedScore}, Final Risk: ${riskScore}, Level: ${riskLevel}, Factors: ${riskFactors.length}`);
+        }
+
         await ApiLog.create({
             userId: req.user?._id,
             endpoint,

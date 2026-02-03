@@ -76,22 +76,14 @@ router.get("/activity", authMiddleware, async (req, res) => {
 // Get user notifications
 router.get("/notifications", authMiddleware, async (req, res) => {
     try {
+        const Notification = require("../models/Notification");
         const userId = req.user._id.toString();
         const limit = req.query.limit || 10;
 
-        // Get recent high-risk logs for notifications
-        const recentLogs = await ApiLog.find({ userId, riskLevel: "HIGH" })
+        const notifications = await Notification.find({ userId })
             .sort({ createdAt: -1 })
-            .limit(parseInt(limit));
-
-        const notifications = recentLogs.map(log => ({
-            id: log._id,
-            type: "warning",
-            title: "High Risk Activity Detected",
-            message: `High-risk request to ${log.endpoint}`,
-            timestamp: log.createdAt,
-            read: false,
-        }));
+            .limit(parseInt(limit))
+            .lean();
 
         res.json({ notifications });
     } catch (error) {

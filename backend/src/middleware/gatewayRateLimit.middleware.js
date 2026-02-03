@@ -1,4 +1,3 @@
-const { getRedisClient } = require("../config/redis");
 const ApiLog = require("../models/ApiLog");
 
 // Rate limit configurations
@@ -15,7 +14,7 @@ const RATE_LIMITS = {
   },
 };
 
-// In-memory fallback when Redis is unavailable
+// In-memory storage for rate limiting
 const memoryStore = new Map();
 const blockedStore = new Map();
 
@@ -32,7 +31,7 @@ const getClientIdentifier = (req) => {
   if (req.user && req.user._id) {
     return `user:${req.user._id}`;
   }
-  
+
   // Fall back to IP for anonymous requests
   const forwarded = req.headers["x-forwarded-for"];
   const ip = forwarded ? forwarded.split(",")[0].trim() : req.ip || req.connection?.remoteAddress || "unknown";
@@ -41,63 +40,6 @@ const getClientIdentifier = (req) => {
 
 const getRateLimitConfig = (req) => {
   return req.user ? RATE_LIMITS.AUTHENTICATED : RATE_LIMITS.ANONYMOUS;
-};
-
-const checkRedisRateLimit = async (identifier, config) => {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null; // Fall back to memory
-  }
-
-  try {
-    const now = Date.now();
-    const windowStart = now - config.WINDOW_MS;
-    const key = `ratelimit:${identifier}`;
-    const blockKey = `blocked:${identifier}`;
-
-    // Check if blocked
-    const isBlocked = await redis.get(blockKey);
-    if (isBlocked) {
-      const ttl = await redis.ttl(blockKey);
-      return {
-        limited: true,
-        blocked: true,
-        retryAfter: ttl > 0 ? ttl : 300,
-      };
-    }
-
-    // Sliding window using sorted sets
-    await redis.zremrangebyscore(key, 0, windowStart);
-    const requestCount = await redis.zcard(key);
-
-    if (requestCount >= config.MAX_REQUESTS) {
-      // Block the user/IP
-      await redis.setex(blockKey, Math.floor(config.BLOCK_DURATION_MS / 1000), "1");
-      
-      return {
-        limited: true,
-        blocked: true,
-        retryAfter: Math.floor(config.BLOCK_DURATION_MS / 1000),
-        current: requestCount,
-        limit: config.MAX_REQUESTS,
-      };
-    }
-
-    // Add current request timestamp
-    await redis.zadd(key, now, `${now}-${Math.random()}`);
-    await redis.expire(key, Math.ceil(config.WINDOW_MS / 1000));
-
-    return {
-      limited: false,
-      current: requestCount + 1,
-      limit: config.MAX_REQUESTS,
-      remaining: config.MAX_REQUESTS - requestCount - 1,
-      resetAt: now + config.WINDOW_MS,
-    };
-  } catch (error) {
-    console.error("Redis rate limit error:", error.message);
-    return null; // Fall back to memory
-  }
 };
 
 const checkMemoryRateLimit = (identifier, config) => {
@@ -161,11 +103,8 @@ const gatewayRateLimitMiddleware = async (req, res, next) => {
   // Update metrics
   rateLimitMetrics.totalRequests++;
 
-  // Try Redis first, fall back to memory
-  let result = await checkRedisRateLimit(identifier, config);
-  if (result === null) {
-    result = checkMemoryRateLimit(identifier, config);
-  }
+  // Check rate limit using in-memory storage
+  const result = checkMemoryRateLimit(identifier, config);
 
   // Set rate limit headers
   if (result.current !== undefined) {

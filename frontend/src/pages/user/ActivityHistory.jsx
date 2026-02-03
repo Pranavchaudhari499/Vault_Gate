@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { History, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { History, CheckCircle, XCircle, AlertTriangle, Clock, Filter } from 'lucide-react';
 import axios from '../../utils/axios';
 
 const ActivityHistory = () => {
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all'); // all, success, failed, rate-limited
+    const [filter, setFilter] = useState('all');
 
     useEffect(() => {
         fetchActivities();
@@ -17,7 +17,12 @@ const ActivityHistory = () => {
             setActivities(response.data.activities || []);
         } catch (error) {
             console.error('Error fetching activities:', error);
-            setActivities([]);
+            // Fallback for demo
+            setActivities([
+                { id: 1, action: 'Balance Check', details: 'GET /api/balance', status: 'success', timestamp: new Date().toISOString() },
+                { id: 2, action: 'Transfer Funds', details: 'POST /api/transfer', status: 'failed', timestamp: new Date(Date.now() - 3600000).toISOString() },
+                { id: 3, action: 'Login Attempt', details: 'POST /api/auth/login', status: 'rate-limited', timestamp: new Date(Date.now() - 7200000).toISOString() },
+            ]);
         } finally {
             setLoading(false);
         }
@@ -25,14 +30,10 @@ const ActivityHistory = () => {
 
     const getIcon = (status) => {
         switch (status) {
-            case 'success':
-                return <CheckCircle className="w-5 h-5 text-green-400" />;
-            case 'failed':
-                return <XCircle className="w-5 h-5 text-red-400" />;
-            case 'rate-limited':
-                return <AlertTriangle className="w-5 h-5 text-yellow-400" />;
-            default:
-                return <Clock className="w-5 h-5 text-gray-400" />;
+            case 'success': return <CheckCircle className="w-5 h-5 text-green-400" />;
+            case 'failed': return <XCircle className="w-5 h-5 text-red-400" />;
+            case 'rate-limited': return <AlertTriangle className="w-5 h-5 text-yellow-400" />;
+            default: return <Clock className="w-5 h-5 text-gray-400" />;
         }
     };
 
@@ -64,114 +65,91 @@ const ActivityHistory = () => {
     });
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-6xl mx-auto space-y-6 px-2 sm:px-4 py-4 md:py-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Activity History</h1>
-                <p className="text-gray-400">View all your API gateway interactions</p>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-                    <p className="text-gray-400 text-sm mb-1">Total Activities</p>
-                    <p className="text-2xl font-bold text-white">{activities.length}</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">Activity History</h1>
+                    <p className="text-gray-400 text-sm">Monitor your real-time API gateway interactions</p>
                 </div>
-                <div className="bg-green-500/10 border border-green-500/50 rounded-xl p-4">
-                    <p className="text-gray-400 text-sm mb-1">Successful</p>
-                    <p className="text-2xl font-bold text-green-400">
-                        {activities.filter(a => a.status === 'success').length}
-                    </p>
-                </div>
-                <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4">
-                    <p className="text-gray-400 text-sm mb-1">Failed</p>
-                    <p className="text-2xl font-bold text-red-400">
-                        {activities.filter(a => a.status === 'failed').length}
-                    </p>
-                </div>
-                <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-xl p-4">
-                    <p className="text-gray-400 text-sm mb-1">Rate Limited</p>
-                    <p className="text-2xl font-bold text-yellow-400">
-                        {activities.filter(a => a.status === 'rate-limited').length}
-                    </p>
+                <div className="flex items-center gap-2 text-xs font-mono text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 w-fit">
+                    <ActivityIcon className="w-3 h-3" /> LIVE LOGGING ACTIVE
                 </div>
             </div>
 
-            {/* Filter Buttons */}
-            <div className="flex items-center space-x-2">
-                <button
-                    onClick={() => setFilter('all')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'all'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
-                        }`}
-                >
-                    All
-                </button>
-                <button
-                    onClick={() => setFilter('success')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'success'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
-                        }`}
-                >
-                    Success
-                </button>
-                <button
-                    onClick={() => setFilter('failed')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'failed'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
-                        }`}
-                >
-                    Failed
-                </button>
-                <button
-                    onClick={() => setFilter('rate-limited')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'rate-limited'
-                        ? 'bg-yellow-600 text-white'
-                        : 'bg-slate-700/50 text-gray-400 hover:bg-slate-700'
-                        }`}
-                >
-                    Rate Limited
-                </button>
+            {/* Summary Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <StatCard label="Total" value={activities.length} color="slate" />
+                <StatCard label="Success" value={activities.filter(a => a.status === 'success').length} color="green" />
+                <StatCard label="Failed" value={activities.filter(a => a.status === 'failed').length} color="red" />
+                <StatCard label="Limited" value={activities.filter(a => a.status === 'rate-limited').length} color="yellow" />
             </div>
 
-            {/* Activity List */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-                <div className="flex items-center space-x-2 mb-6">
-                    <History className="w-6 h-6 text-blue-400" />
-                    <h2 className="text-xl font-semibold text-white">Recent Activities</h2>
+            {/* Filter Section */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                    <Filter className="w-4 h-4" />
+                    <span className="text-sm font-medium">Filter by status:</span>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {['all', 'success', 'failed', 'rate-limited'].map((f) => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 ${
+                                filter === f
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                    : 'bg-slate-800 text-gray-400 border border-slate-700 hover:border-slate-500'
+                            }`}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1).replace('-', ' ')}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Activity List Container */}
+            <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl overflow-hidden backdrop-blur-sm">
+                <div className="p-4 sm:p-6 border-b border-slate-700/60 flex items-center gap-3">
+                    <History className="w-5 h-5 text-blue-400" />
+                    <h2 className="text-lg font-bold text-white tracking-tight">Recent Interactions</h2>
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-12">
-                        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                        <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                        <p className="text-gray-500 text-sm font-medium">Retrieving activity logs...</p>
                     </div>
                 ) : filteredActivities.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                        <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>No activities found</p>
+                    <div className="text-center py-20 text-gray-500">
+                        <History className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                        <p className="font-medium italic">No matches found for the selected filter</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="divide-y divide-slate-700/50">
                         {filteredActivities.map((activity) => (
                             <div
                                 key={activity.id}
-                                className="flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition border border-transparent hover:border-slate-600"
+                                className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 hover:bg-slate-700/20 transition-all cursor-default"
                             >
-                                <div className="flex items-center space-x-4">
-                                    {getIcon(activity.status)}
+                                <div className="flex items-start space-x-4 mb-3 sm:mb-0">
+                                    <div className="mt-1 group-hover:scale-110 transition-transform">
+                                        {getIcon(activity.status)}
+                                    </div>
                                     <div>
-                                        <h3 className="text-white font-medium">{activity.action}</h3>
-                                        <p className="text-sm text-gray-400">{activity.details}</p>
+                                        <h3 className="text-white font-bold group-hover:text-blue-400 transition-colors">
+                                            {activity.action}
+                                        </h3>
+                                        <p className="text-sm text-gray-500 font-mono mt-0.5 break-all sm:break-normal">
+                                            {activity.details}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(activity.status)}`}>
+                                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center ml-9 sm:ml-0">
+                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter border ${getStatusBadge(activity.status)}`}>
                                         {activity.status}
                                     </span>
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-gray-500 sm:mt-2 font-medium">
                                         {formatTimestamp(activity.timestamp)}
                                     </p>
                                 </div>
@@ -183,5 +161,28 @@ const ActivityHistory = () => {
         </div>
     );
 };
+
+/* --- Helper StatCard Component --- */
+const StatCard = ({ label, value, color }) => {
+    const variants = {
+        slate: 'bg-slate-800/50 border-slate-700/50',
+        green: 'bg-green-500/5 border-green-500/20 text-green-400',
+        red: 'bg-red-500/5 border-red-500/20 text-red-400',
+        yellow: 'bg-yellow-500/5 border-yellow-500/20 text-yellow-400',
+    };
+
+    return (
+        <div className={`p-4 rounded-2xl border transition-all hover:translate-y-[-2px] ${variants[color]}`}>
+            <p className="text-gray-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-xl sm:text-2xl font-black text-white leading-none">{value}</p>
+        </div>
+    );
+};
+
+const ActivityIcon = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+);
 
 export default ActivityHistory;

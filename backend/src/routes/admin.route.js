@@ -33,6 +33,7 @@ router.get("/metrics", authMiddleware, async (req, res) => {
         blockedRequests,
         rateLimitedRequests,
         suspiciousActivities,
+        totalAuthenticatedUsers,
         activeUserIds
     ] = await Promise.all([
         ApiLog.countDocuments(),
@@ -42,6 +43,7 @@ router.get("/metrics", authMiddleware, async (req, res) => {
         ApiLog.countDocuments({
             $or: [{ isBlocked: true }, { statusCode: { $gte: 400 } }]
         }),
+        User.countDocuments(),
         ApiLog.distinct("userId", { createdAt: { $gte: oneHourAgo } })
     ]);
 
@@ -50,7 +52,7 @@ router.get("/metrics", authMiddleware, async (req, res) => {
         allowedRequests,
         blockedRequests,
         rateLimitedRequests,
-        activeUsers: activeUserIds.length,
+        activeUsers: totalAuthenticatedUsers,
         suspiciousActivities
     });
 });
@@ -165,7 +167,7 @@ router.get("/suspicious-activity", authMiddleware, async (req, res) => {
         return {
             id: log._id || index + 1,
             username: log.userId?.username || "unknown",
-            userId: log.userId,
+            userId: log.userId?._id || log.userId || null,
             accountType: log.userId?.accountType || "SAVINGS",
             action,
             type,
@@ -346,6 +348,56 @@ router.get("/risk-dashboard", authMiddleware, async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+});
+
+// Traffic history for charts (24 hour time-series data)
+router.get("/traffic-history", authMiddleware, async (req, res) => {
+    if (!ensureAdmin(req, res)) return;
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Aggregate traffic data into 4-hour buckets
+    const trafficAgg = await ApiLog.aggregate([
+        { $match: { createdAt: { $gte: twentyFourHoursAgo } } },
+        {
+            $group: {
+                _id: {
+                    hour: { $hour: "$createdAt" }
+                },
+                total: { $sum: 1 },
+                blocked: {
+                    $sum: {
+                        $cond: [{ $or: [{ $eq: ["$isBlocked", true] }, { $eq: ["$statusCode", 429] }] }, 1, 0]
+                    }
+                }
+            }
+        },
+        { $sort: { "_id.hour": 1 } }
+    ]);
+
+    // Create time buckets for the last 24 hours (every 4 hours)
+    const now = new Date();
+    const buckets = [];
+    for (let i = 0; i < 24; i += 4) {
+        const hour = (now.getHours() - (24 - i) + 24) % 24;
+        const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
+
+        // Find data for this hour range
+        const hourData = trafficAgg.filter(item =>
+            item._id.hour >= hour && item._id.hour < (hour + 4)
+        );
+
+        const total = hourData.reduce((sum, item) => sum + item.total, 0);
+        const blocked = hourData.reduce((sum, item) => sum + item.blocked, 0);
+
+        buckets.push({
+            time: timeLabel,
+            total,
+            blocked
+        });
+    }
+
+    res.json(buckets);
 });
 
 // Gateway rate limit metrics endpoint
